@@ -29,28 +29,28 @@ func main() {
 		os.Exit(1)
 	}
 
+	endpoints := parseFile(os.Args[1])
+
+	startServer(endpoints)
+
+}
+
+// loads the file and return the expected values
+func parseFile(filePath string) Endpoints {
+	mockFile := os.Args[1]
+	file, err := ioutil.ReadFile(mockFile)
 	var endpoints Endpoints
 
-	mockFile := os.Args[1]
-
-	file, err := ioutil.ReadFile(mockFile)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	yaml.Unmarshal(file, &endpoints)
 
-	for endpoint := range endpoints {
-		http.HandleFunc(endpoint, createHandler(endpoints))
-	}
-
-	err = http.ListenAndServe(":8000", nil)
-
-	if err != nil {
-		log.Fatal(err)
-	}
+	return endpoints
 }
 
+// create handler based on endpoints
 func createHandler(endpoints Endpoints) func(http.ResponseWriter, *http.Request) {
 	return func(writer http.ResponseWriter, request *http.Request) {
 		message := []byte(endpoints[request.URL.Path][request.Method].Payload)
@@ -92,5 +92,18 @@ func createHandler(endpoints Endpoints) func(http.ResponseWriter, *http.Request)
 
 			writer.Write(body)
 		}
+	}
+}
+
+// start server
+func startServer(endpoints Endpoints) {
+	for endpoint := range endpoints {
+		http.HandleFunc(endpoint, createHandler(endpoints))
+	}
+
+	err := http.ListenAndServe(":8000", nil)
+
+	if err != nil {
+		log.Fatal(err)
 	}
 }
